@@ -3,429 +3,394 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Toon Fight Arena</title>
 
 <style>
 *{box-sizing:border-box}
 body{
- margin:0;background:#101525;color:white;
- font-family:Arial,sans-serif;overflow:hidden
+ margin:0;
+ background:#101525;
+ color:white;
+ font-family:Arial,sans-serif;
+ overflow:hidden;
+ touch-action:none;
 }
-canvas{display:block}
 .screen{
- position:absolute;inset:0;z-index:10;
- display:flex;align-items:center;justify-content:center;
+ position:absolute;
+ inset:0;
+ display:flex;
  flex-direction:column;
- background:linear-gradient(135deg,#11172bea,#263d62eF);
- padding:15px;text-align:center;overflow:auto
+ align-items:center;
+ justify-content:center;
+ background:linear-gradient(135deg,#101525,#252b49);
+ z-index:5;
+ padding:20px;
 }
-h1{font-size:34px;color:#ffd44d;margin:8px}
-h2{margin:8px}
-.subtitle{color:#c5d4ee;margin:5px}
-.characters{
- display:flex;flex-wrap:wrap;justify-content:center;
- gap:10px;margin:20px 0;max-width:500px
+h1{
+ color:#ffb000;
+ font-size:35px;
+ text-align:center;
+ text-shadow:0 0 15px #ff6a00;
 }
-.card{
- width:135px;padding:13px 7px;
- border:2px solid #64748b;border-radius:15px;
- background:#1c2b45;cursor:pointer
-}
-.card.selected{border:3px solid #ffd44d;background:#344d72}
-.avatar{font-size:42px;margin:7px}
-.card small{display:block;color:#cbd5e1;margin-top:5px}
 button{
- border:0;border-radius:12px;padding:13px 18px;
- background:#344e7d;color:white;font-weight:bold;
- font-size:15px;cursor:pointer
+ background:#ff9500;
+ color:#111;
+ border:0;
+ padding:13px 22px;
+ border-radius:10px;
+ font-weight:bold;
+ font-size:16px;
+ margin:6px;
 }
-button:active{transform:scale(.96)}
-#start{background:#e84d36;color:white;font-size:19px}
-#hud{
- display:none;position:absolute;top:12px;left:4%;
- width:92%;justify-content:space-between;z-index:5
+button:active{transform:scale(.94)}
+.characters{
+ display:flex;
+ flex-wrap:wrap;
+ justify-content:center;
+ gap:12px;
 }
-.fighter{width:44%;text-align:left}
-.bar{height:15px;background:#555;border-radius:20px;overflow:hidden}
-.health{height:100%;background:#37e879;width:100%}
-#status{
- position:absolute;top:75px;width:100%;
- text-align:center;font-weight:bold;font-size:23px;
- z-index:5;text-shadow:0 2px 5px black
+.character{
+ background:#202b46;
+ border:2px solid #ff9500;
+ border-radius:12px;
+ padding:18px;
+ min-width:130px;
+ text-align:center;
+}
+.character span{
+ font-size:45px;
+ display:block;
+ margin-bottom:10px;
+}
+#game{
+ display:none;
+ height:100dvh;
+ width:100vw;
+ position:relative;
+ background:linear-gradient(#151d38 0%,#34446b 65%,#25202b 65%);
+}
+#top{
+ position:absolute;
+ top:12px;
+ width:100%;
+ display:flex;
+ justify-content:space-around;
+ z-index:2;
+}
+.healthbox{width:40%;text-align:center}
+.health{
+ height:17px;
+ background:#555;
+ border:2px solid white;
+ border-radius:20px;
+ overflow:hidden;
+}
+.fill{
+ height:100%;
+ width:100%;
+ background:#20e65c;
+}
+#arena{
+ position:absolute;
+ bottom:100px;
+ width:100%;
+ height:65%;
+}
+.fighter{
+ position:absolute;
+ bottom:0;
+ font-size:75px;
+ text-align:center;
+ transition:left .12s;
+}
+#player{left:15%}
+#enemy{right:15%}
+.name{
+ font-size:13px;
+ font-weight:bold;
+ color:#ffdb69;
 }
 #controls{
- display:none;position:absolute;bottom:15px;
- width:100%;justify-content:space-between;
- padding:0 14px;z-index:5
+ position:absolute;
+ bottom:15px;
+ width:100%;
+ display:flex;
+ justify-content:space-around;
+ align-items:center;
 }
-.group{display:flex;gap:8px}
-#controls button{height:60px;min-width:58px;touch-action:none}
-#attack{background:#db4935;height:75px!important}
-#guard{background:#3477b9}
-#restart{display:none;position:absolute;top:55%;left:50%;
- transform:translate(-50%,-50%);z-index:15}
+.control{
+ background:#25334f;
+ border:2px solid #ffb000;
+ color:white;
+ width:62px;
+ height:62px;
+ border-radius:50%;
+ font-size:23px;
+}
+#message{
+ position:absolute;
+ top:30%;
+ width:100%;
+ text-align:center;
+ font-size:30px;
+ font-weight:bold;
+ color:#ffcb43;
+ z-index:3;
+}
+#restart{
+ display:none;
+ position:absolute;
+ top:55%;
+ left:50%;
+ transform:translateX(-50%);
+ z-index:4;
+}
 </style>
 </head>
 
 <body>
 
-<div id="selection" class="screen">
- <h1>TOON FIGHT ARENA</h1>
- <div class="subtitle">CHOOSE YOUR FIGHTER</div>
+<div class="screen" id="menu">
+<h1>⚔ TOON FIGHT ARENA</h1>
+<p>CHOOSE YOUR FIGHTER</p>
 
- <div class="characters">
-  <div class="card selected" data-id="0">
-   <div class="avatar">🥷</div>
-   <b>SHADOW</b>
-   <small>Power: 8/10</small>
-   <small>Speed: 9/10</small>
-  </div>
-  <div class="card" data-id="1">
-   <div class="avatar">🥊</div>
-   <b>TITAN</b>
-   <small>Power: 10/10</small>
-   <small>Speed: 6/10</small>
-  </div>
-  <div class="card" data-id="2">
-   <div class="avatar">⚡</div>
-   <b>FLASH</b>
-   <small>Power: 7/10</small>
-   <small>Speed: 10/10</small>
-  </div>
-  <div class="card" data-id="3">
-   <div class="avatar">🔥</div>
-   <b>BLAZE</b>
-   <small>Power: 9/10</small>
-   <small>Speed: 8/10</small>
-  </div>
- </div>
-
- <h2 id="chosen">SHADOW SELECTED</h2>
- <button id="start">START FIGHT ⚔️</button>
+<div class="characters">
+<div class="character">
+<span>🥷</span>
+SHADOW
+<button onclick="choose('SHADOW','🥷')">SELECT</button>
 </div>
 
-<div id="hud">
- <div class="fighter">
-  <b id="playerName">SHADOW</b>
-  <div class="bar"><div id="hp1" class="health"></div></div>
- </div>
- <div class="fighter" style="text-align:right">
-  <b>CPU FIGHTER</b>
-  <div class="bar"><div id="hp2" class="health"></div></div>
- </div>
+<div class="character">
+<span>🦸</span>
+TITAN
+<button onclick="choose('TITAN','🦸')">SELECT</button>
 </div>
 
-<div id="status">ROUND 1</div>
+<div class="character">
+<span>⚡</span>
+FLASH
+<button onclick="choose('FLASH','⚡')">SELECT</button>
+</div>
+
+<div class="character">
+<span>🔥</span>
+BLAZE
+<button onclick="choose('BLAZE','🔥')">SELECT</button>
+</div>
+</div>
+<p>Choose your character to begin!</p>
+</div>
+
+<div id="game">
+
+<div id="top">
+<div class="healthbox">
+<b id="pname">PLAYER</b>
+<div class="health"><div class="fill" id="php"></div></div>
+</div>
+<div class="healthbox">
+<b>CPU</b>
+<div class="health"><div class="fill" id="ehp"></div></div>
+</div>
+</div>
+
+<div id="message">FIGHT!</div>
+
+<div id="arena">
+<div class="fighter" id="player">
+🥷
+<div class="name">PLAYER</div>
+</div>
+
+<div class="fighter" id="enemy">
+🤖
+<div class="name">CPU</div>
+</div>
+</div>
 
 <div id="controls">
- <div class="group">
-  <button id="left">◀</button>
-  <button id="right">▶</button>
- </div>
- <div class="group">
-  <button id="guard">BLOCK</button>
-  <button id="attack">PUNCH</button>
- </div>
+<div>
+<button class="control" id="left">◀</button>
+<button class="control" id="right">▶</button>
+</div>
+<div>
+<button class="control" id="block">🛡</button>
+<button class="control" id="punch">👊</button>
+<button class="control" id="kick">🦶</button>
+</div>
 </div>
 
-<button id="restart">PLAY AGAIN</button>
+<button id="restart" onclick="location.reload()">PLAY AGAIN</button>
+</div>
 
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
-</script>
+<script>
+let playerHealth=100;
+let enemyHealth=100;
+let playerName="SHADOW";
+let playerEmoji="🥷";
+let playerX=15;
+let enemyX=75;
+let blocking=false;
+let finished=false;
+let attackLock=false;
 
-<script type="module">
-import * as THREE from "three";
+const player=document.getElementById("player");
+const enemy=document.getElementById("enemy");
+const game=document.getElementById("game");
 
-// GAME SETUP
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x91c9f4);
-scene.fog=new THREE.Fog(0x91c9f4,15,35);
+function choose(name,emoji){
+ playerName=name;
+ playerEmoji=emoji;
 
-const camera=new THREE.PerspectiveCamera(
- 50,innerWidth/innerHeight,.1,100
-);
-camera.position.set(0,7,14);
-camera.lookAt(0,1,0);
+ document.getElementById("menu").style.display="none";
+ game.style.display="block";
 
-const renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-document.body.prepend(renderer.domElement);
-
-scene.add(new THREE.HemisphereLight(0xffffff,0x536078,2));
-
-const light=new THREE.DirectionalLight(0xffffff,3);
-light.position.set(-4,10,7);
-light.castShadow=true;
-scene.add(light);
-
-// ARENA
-const floor=new THREE.Mesh(
- new THREE.CylinderGeometry(7,7,.5,64),
- new THREE.MeshStandardMaterial({color:0x368d67})
-);
-floor.position.y=-.3;
-floor.receiveShadow=true;
-scene.add(floor);
-
-const ring=new THREE.Mesh(
- new THREE.TorusGeometry(6.5,.12,8,80),
- new THREE.MeshStandardMaterial({color:0xffd65a})
-);
-ring.rotation.x=Math.PI/2;
-scene.add(ring);
-
-function wall(x,z,w,h){
- const m=new THREE.Mesh(
-  new THREE.BoxGeometry(w,h,.4),
-  new THREE.MeshStandardMaterial({color:0x536b9e})
- );
- m.position.set(x,h/2-.2,z);
- scene.add(m);
-}
-wall(0,-7,16,5);
-wall(-8,0,.4,5);
-wall(8,0,.4,5);
-
-// FIGHTER MODELS
-function makeFighter(color,skin){
- const root=new THREE.Group();
- const bodyMat=new THREE.MeshStandardMaterial({color});
- const skinMat=new THREE.MeshStandardMaterial({color:skin});
- const darkMat=new THREE.MeshStandardMaterial({color:0x25314c});
-
- function part(geo,mat,x,y,z){
-  const mesh=new THREE.Mesh(geo,mat);
-  mesh.position.set(x,y,z);
-  mesh.castShadow=true;
-  root.add(mesh);
-  return mesh;
- }
-
- part(new THREE.CapsuleGeometry(.48,.65,5,12),
- bodyMat,0,1.25,0);
-
- part(new THREE.SphereGeometry(.38,24,24),
- skinMat,0,2.15,0);
-
- part(new THREE.SphereGeometry(.4,20,12,0,Math.PI*2,0,Math.PI/2),
- darkMat,0,2.32,0);
-
- part(new THREE.SphereGeometry(.045,10,10),
- darkMat,-.13,2.17,.34);
- part(new THREE.SphereGeometry(.045,10,10),
- darkMat,.13,2.17,.34);
-
- for(let x of [-.23,.23]){
-  part(new THREE.CapsuleGeometry(.14,.55,4,8),
-  darkMat,x,.43,0);
- }
-
- const arms=[];
- for(let x of [-.57,.57]){
-  const pivot=new THREE.Group();
-  pivot.position.set(x,1.65,0);
-  root.add(pivot);
-
-  const arm=new THREE.Mesh(
-   new THREE.CapsuleGeometry(.14,.48,4,8),
-   skinMat
-  );
-  arm.position.y=-.32;
-  arm.castShadow=true;
-  pivot.add(arm);
-  arms.push(pivot);
- }
-
- scene.add(root);
- return {root,arms};
+ document.getElementById("pname").textContent=name;
+ player.innerHTML=emoji+'<div class="name">'+name+'</div>';
+ startCPU();
 }
 
-// CHARACTER OPTIONS
-const options=[
- {name:"SHADOW",body:0x2588ff,skin:0xffc18c,power:8,speed:9},
- {name:"TITAN",body:0xd94a35,skin:0xd69b75,power:10,speed:6},
- {name:"FLASH",body:0xe7d52c,skin:0x9b633e,power:7,speed:10},
- {name:"BLAZE",body:0x963ce5,skin:0xffc18c,power:9,speed:8}
-];
+function update(){
+ player.style.left=playerX+"%";
+ enemy.style.left=enemyX+"%";
 
-let selected=0;
-let player=null;
-let enemy=null;
-let hp1=100,hp2=100;
-let attackCooldown=0,enemyCooldown=1;
-let guarding=false,gameOver=false,playing=false;
-let keys={};
+ document.getElementById("php").style.width=playerHealth+"%";
+ document.getElementById("ehp").style.width=enemyHealth+"%";
 
-document.querySelectorAll(".card").forEach(card=>{
- card.onclick=()=>{
-  selected=Number(card.dataset.id);
-  document.querySelectorAll(".card").forEach(c=>
-   c.classList.remove("selected")
-  );
-  card.classList.add("selected");
-  document.getElementById("chosen").textContent=
-   options[selected].name+" SELECTED";
- };
-});
+ document.getElementById("php").style.background=
+ playerHealth<30?"red":"#20e65c";
 
-function resetGame(){
- if(player){
-  scene.remove(player.root);
-  scene.remove(enemy.root);
+ document.getElementById("ehp").style.background=
+ enemyHealth<30?"red":"#20e65c";
+}
+
+function move(direction){
+ if(finished)return;
+
+ if(direction==="left")playerX=Math.max(0,playerX-4);
+ if(direction==="right")playerX=Math.min(85,playerX+4);
+
+ update();
+}
+
+function attack(type){
+ if(finished || attackLock)return;
+
+ attackLock=true;
+
+ let distance=Math.abs(playerX-enemyX);
+
+ if(distance<27){
+ let damage=type==="kick"?15:10;
+ enemyHealth=Math.max(0,enemyHealth-damage);
+
+ document.getElementById("message").textContent=
+ type==="kick"?"POWER KICK!":"PUNCH!";
+
+ enemy.style.transform="translateX(12px)";
+ setTimeout(()=>enemy.style.transform="none",150);
+ }else{
+ document.getElementById("message").textContent="TOO FAR!";
  }
- const fighter=options[selected];
- player=makeFighter(fighter.body,fighter.skin);
- enemy=makeFighter(0xff4848,0xd69b75);
 
- player.root.position.set(-2,0,0);
- enemy.root.position.set(2,0,0);
- player.root.rotation.y=Math.PI/2;
- enemy.root.rotation.y=-Math.PI/2;
+ update();
+ checkWinner();
 
- hp1=100;hp2=100;
- attackCooldown=0;enemyCooldown=1;
- guarding=false;gameOver=false;
- updateBars();
+ setTimeout(()=>{
+ attackLock=false;
+ if(!finished)document.getElementById("message").textContent="";
+ },500);
 }
 
-function updateBars(){
- document.getElementById("hp1").style.width=hp1+"%";
- document.getElementById("hp2").style.width=hp2+"%";
+function defend(){
+ blocking=true;
+ document.getElementById("message").textContent="BLOCKING!";
 }
 
-function finishGame(){
- if(hp1<=0||hp2<=0){
-  gameOver=true;
-  document.getElementById("status").textContent=
-   hp2<=0?"YOU WIN! 🏆":"CPU WINS!";
-  document.getElementById("restart").style.display="block";
+function stopDefend(){
+ blocking=false;
+ document.getElementById("message").textContent="";
+}
+
+function cpuAttack(){
+ if(finished)return;
+
+ let distance=Math.abs(playerX-enemyX);
+
+ if(distance>25){
+ enemyX=Math.max(playerX+12,enemyX-3);
+ enemyX=Math.min(85,enemyX);
+ update();
+ return;
+ }
+
+ if(blocking){
+ playerHealth=Math.max(0,playerHealth-3);
+ document.getElementById("message").textContent="BLOCKED!";
+ }else{
+ playerHealth=Math.max(0,playerHealth-8);
+ document.getElementById("message").textContent="CPU ATTACK!";
+ }
+
+ update();
+ checkWinner();
+}
+
+let cpuTimer;
+
+function startCPU(){
+ cpuTimer=setInterval(cpuAttack,1400);
+}
+
+function checkWinner(){
+ if(enemyHealth<=0){
+ finish("🏆 YOU WIN!");
+ }
+ if(playerHealth<=0){
+ finish("💀 CPU WINS!");
  }
 }
 
-function punch(){
- if(!playing||gameOver||attackCooldown>0)return;
-
- attackCooldown=.55;
- player.arms[1].rotation.z=-1.7;
-
- if(Math.abs(player.root.position.x-enemy.root.position.x)<2.5){
-  hp2=Math.max(0,hp2-options[selected].power);
-  updateBars();
- }
- finishGame();
+function finish(message){
+ finished=true;
+ clearInterval(cpuTimer);
+ document.getElementById("message").textContent=message;
+ document.getElementById("restart").style.display="block";
 }
 
-function holdButton(id,down,up){
- const b=document.getElementById(id);
- b.addEventListener("pointerdown",e=>{
-  e.preventDefault();down();
- });
- ["pointerup","pointerleave","pointercancel"].forEach(event=>{
-  b.addEventListener(event,e=>{
-   e.preventDefault();up();
-  });
+function bindHold(id,action){
+ const button=document.getElementById(id);
+
+ button.addEventListener("pointerdown",e=>{
+ e.preventDefault();
+ action();
  });
 }
 
-holdButton("left",()=>keys.left=true,()=>keys.left=false);
-holdButton("right",()=>keys.right=true,()=>keys.right=false);
-holdButton("guard",()=>guarding=true,()=>guarding=false);
+bindHold("left",()=>move("left"));
+bindHold("right",()=>move("right"));
+bindHold("punch",()=>attack("punch"));
+bindHold("kick",()=>attack("kick"));
 
-document.getElementById("attack").addEventListener("pointerdown",punch);
-
-addEventListener("keydown",e=>{
- keys[e.key.toLowerCase()]=true;
- if(e.key===" ")punch();
+document.getElementById("block").addEventListener("pointerdown",e=>{
+ e.preventDefault();
+ defend();
 });
-addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-// START GAME
-document.getElementById("start").onclick=()=>{
- resetGame();
- playing=true;
- document.getElementById("selection").style.display="none";
- document.getElementById("hud").style.display="flex";
- document.getElementById("controls").style.display="flex";
- document.getElementById("playerName").textContent=
- options[selected].name;
- document.getElementById("status").textContent="ROUND 1";
-};
+["pointerup","pointerleave","pointercancel"].forEach(event=>{
+ document.getElementById("block").addEventListener(event,stopDefend);
+});
 
-document.getElementById("restart").onclick=()=>{
- playing=false;
- document.getElementById("restart").style.display="none";
- document.getElementById("hud").style.display="none";
- document.getElementById("controls").style.display="none";
- document.getElementById("selection").style.display="flex";
-};
-
-// GAME LOOP
-const clock=new THREE.Clock();
-
-function animate(){
- requestAnimationFrame(animate);
- const dt=Math.min(clock.getDelta(),.04);
-
- if(playing&&!gameOver){
-  attackCooldown=Math.max(0,attackCooldown-dt);
-  enemyCooldown-=dt;
-
-  let direction=0;
-  if(keys.left||keys.a||keys.arrowleft)direction-=1;
-  if(keys.right||keys.d||keys.arrowright)direction+=1;
-
-  const speed=options[selected].speed*.4;
-  player.root.position.x+=direction*speed*dt;
-  player.root.position.x=THREE.MathUtils.clamp(
-   player.root.position.x,-5,5
-  );
-
-  if(attackCooldown<=.25){
-   player.arms[1].rotation.z=THREE.MathUtils.lerp(
-    player.arms[1].rotation.z,0,dt*12
-   );
-  }
-
-  const distance=player.root.position.x-enemy.root.position.x;
-
-  if(Math.abs(distance)>1.55){
-   enemy.root.position.x+=Math.sign(distance)*2.1*dt;
-  }
-
-  if(Math.abs(distance)<2&&enemyCooldown<=0){
-   enemyCooldown=1.1;
-   enemy.arms[0].rotation.z=1.4;
-
-   if(!guarding){
-    hp1=Math.max(0,hp1-8);
-    updateBars();
-   }
-   finishGame();
-  }
-
-  enemy.arms[0].rotation.z=THREE.MathUtils.lerp(
-   enemy.arms[0].rotation.z,0,dt*5
-  );
-
-  const t=clock.elapsedTime;
-  player.root.position.y=Math.abs(Math.sin(t*5))*.035;
-  enemy.root.position.y=Math.abs(Math.sin(t*5+1))*.035;
- }
-
- renderer.render(scene,camera);
-}
-animate();
-
-addEventListener("resize",()=>{
- camera.aspect=innerWidth/innerHeight;
- camera.updateProjectionMatrix();
- renderer.setSize(innerWidth,innerHeight);
+document.addEventListener("keydown",e=>{
+ if(e.repeat)return;
+ if(e.key==="ArrowLeft")move("left");
+ if(e.key==="ArrowRight")move("right");
+ if(e.key===" ")attack("punch");
+ if(e.key==="k")attack("kick");
 });
 </script>
+
 </body>
 </html>
