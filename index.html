@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toon Fight Arena</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#101525;color:white;
+ font-family:Arial,sans-serif;overflow:hidden;
+}
+#hud{
+ position:absolute;top:12px;left:4%;width:92%;
+ display:flex;justify-content:space-between;gap:12px;
+ z-index:5;
+}
+.fighter{width:44%}
+.name{font-weight:bold;margin-bottom:7px}
+.bar{height:15px;background:#444;border-radius:20px;overflow:hidden}
+.health{height:100%;background:#36e879;width:100%;transition:width .2s}
+#status{
+ position:absolute;top:90px;width:100%;
+ text-align:center;font-size:22px;font-weight:bold;
+ z-index:5;text-shadow:0 2px 5px black;
+}
+#controls{
+ position:absolute;bottom:18px;width:100%;
+ display:flex;justify-content:space-between;
+ padding:0 18px;z-index:5;align-items:end;
+}
+.group{display:flex;gap:9px}
+button{
+ border:2px solid #ffffff66;border-radius:15px;
+ background:#263b68dd;color:white;
+ font-size:18px;font-weight:bold;
+ min-width:58px;height:58px;
+ touch-action:none;
+}
+button:active{background:#e65b4e}
+#attack{background:#d94c37;min-width:76px;height:76px}
+#guard{background:#3477b9}
+#restart{
+ position:absolute;top:55%;left:50%;
+ transform:translate(-50%,-50%);
+ z-index:10;display:none;
+ background:#e34d3e;padding:14px 25px;
+}
+#hint{
+ position:absolute;bottom:105px;width:100%;
+ text-align:center;color:#ddd;font-size:12px;
+ pointer-events:none;
+}
+canvas{display:block}
+</style>
+</head>
+
+<body>
+
+<div id="hud">
+ <div class="fighter">
+  <div class="name">PLAYER 1</div>
+  <div class="bar"><div id="hp1" class="health"></div></div>
+ </div>
+ <div class="fighter" style="text-align:right">
+  <div class="name">CPU FIGHTER</div>
+  <div class="bar"><div id="hp2" class="health"></div></div>
+ </div>
+</div>
+
+<div id="status">ROUND 1</div>
+
+<div id="hint">Use LEFT / RIGHT to move • PUNCH to attack</div>
+
+<div id="controls">
+ <div class="group">
+  <button id="left">◀</button>
+  <button id="right">▶</button>
+ </div>
+ <div class="group">
+  <button id="guard">BLOCK</button>
+  <button id="attack">PUNCH</button>
+ </div>
+</div>
+
+<button id="restart">PLAY AGAIN</button>
+
+<script type="importmap">
+{
+ "imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+ }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x91c9f4);
+scene.fog = new THREE.Fog(0x91c9f4,15,35);
+
+const camera = new THREE.PerspectiveCamera(
+ 50,innerWidth/innerHeight,0.1,100
+);
+camera.position.set(0,7,14);
+camera.lookAt(0,1,0);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x536078,2));
+
+const light=new THREE.DirectionalLight(0xffffff,3);
+light.position.set(-4,10,7);
+light.castShadow=true;
+scene.add(light);
+
+// ARENA
+const floor=new THREE.Mesh(
+ new THREE.CylinderGeometry(7,7,0.5,64),
+ new THREE.MeshStandardMaterial({color:0x368d67})
+);
+floor.position.y=-0.3;
+floor.receiveShadow=true;
+scene.add(floor);
+
+const ring=new THREE.Mesh(
+ new THREE.TorusGeometry(6.5,0.12,8,80),
+ new THREE.MeshStandardMaterial({color:0xffd65a})
+);
+ring.rotation.x=Math.PI/2;
+ring.position.y=0;
+scene.add(ring);
+
+// BACKGROUND WALLS
+function wall(x,z,w,h,color){
+ const m=new THREE.Mesh(
+  new THREE.BoxGeometry(w,h,0.4),
+  new THREE.MeshStandardMaterial({color})
+ );
+ m.position.set(x,h/2-0.2,z);
+ scene.add(m);
+}
+wall(0,-7,16,5,0x536b9e);
+wall(-8,0,0.4,5,0x536b9e);
+wall(8,0,0.4,5,0x536b9e);
+
+// CHARACTER CREATOR
+function makeFighter(color,skin){
+ const root=new THREE.Group();
+
+ const bodyMat=new THREE.MeshStandardMaterial({color});
+ const skinMat=new THREE.MeshStandardMaterial({color:skin});
+ const darkMat=new THREE.MeshStandardMaterial({color:0x25314c});
+
+ function part(geo,mat,x,y,z){
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.position.set(x,y,z);
+  mesh.castShadow=true;
+  root.add(mesh);
+  return mesh;
+ }
+
+ // Body
+ part(new THREE.CapsuleGeometry(.48,.65,5,12),
+ bodyMat,0,1.25,0);
+
+ // Head
+ part(new THREE.SphereGeometry(.38,24,24),
+ skinMat,0,2.15,0);
+
+ // Hair
+ part(new THREE.SphereGeometry(.4,20,12,0,Math.PI*2,0,Math.PI/2),
+ darkMat,0,2.32,0);
+
+ // Eyes
+ part(new THREE.SphereGeometry(.045,10,10),
+ darkMat,-.13,2.17,.34);
+ part(new THREE.SphereGeometry(.045,10,10),
+ darkMat,.13,2.17,.34);
+
+ // Legs
+ const legs=[];
+ for(let x of [-.23,.23]){
+  const leg=part(
+   new THREE.CapsuleGeometry(.14,.55,4,8),
+   darkMat,x,.43,0
+  );
+  legs.push(leg);
+ }
+
+ // Arms
+ const arms=[];
+ for(let x of [-.57,.57]){
+  const pivot=new THREE.Group();
+  pivot.position.set(x,1.65,0);
+  root.add(pivot);
+
+  const arm=new THREE.Mesh(
+   new THREE.CapsuleGeometry(.14,.48,4,8),
+   skinMat
+  );
+  arm.position.y=-.32;
+  arm.castShadow=true;
+  pivot.add(arm);
+
+  arms.push(pivot);
+ }
+
+ scene.add(root);
+ return {root,arms,legs};
+}
+
+const player=makeFighter(0x2588ff,0xffc18c);
+const enemy=makeFighter(0xff4848,0xd69b75);
+
+player.root.position.set(-2,0,0);
+enemy.root.position.set(2,0,0);
+
+player.root.rotation.y=Math.PI/2;
+enemy.root.rotation.y=-Math.PI/2;
+
+let hp1=100,hp2=100;
+let attackCooldown=0,enemyCooldown=1;
+let guarding=false,gameOver=false;
+let direction=0;
+
+const keys={};
+addEventListener("keydown",e=>{
+ keys[e.key.toLowerCase()]=true;
+ if(e.key===" "){e.preventDefault();punch()}
+});
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+function holdButton(id,down,up){
+ const b=document.getElementById(id);
+ b.addEventListener("pointerdown",e=>{
+  e.preventDefault();down();
+ });
+ ["pointerup","pointerleave","pointercancel"].forEach(event=>{
+  b.addEventListener(event,e=>{
+   e.preventDefault();up();
+  });
+ });
+}
+
+holdButton("left",()=>keys.left=true,()=>keys.left=false);
+holdButton("right",()=>keys.right=true,()=>keys.right=false);
+holdButton("guard",()=>guarding=true,()=>guarding=false);
+document.getElementById("attack").addEventListener("pointerdown",punch);
+
+function updateBars(){
+ document.getElementById("hp1").style.width=hp1+"%";
+ document.getElementById("hp2").style.width=hp2+"%";
+}
+
+function punch(){
+ if(gameOver||attackCooldown>0)return;
+
+ attackCooldown=.55;
+ player.arms[1].rotation.z=-1.7;
+
+ if(Math.abs(player.root.position.x-enemy.root.position.x)<2.5){
+  if(Math.random()>.15){
+   hp2=Math.max(0,hp2-10);
+   updateBars();
+  }
+ }
+ checkWinner();
+}
+
+function checkWinner(){
+ if(hp1<=0||hp2<=0){
+  gameOver=true;
+  document.getElementById("status").textContent=
+   hp2<=0?"YOU WIN! 🏆":"CPU WINS!";
+  document.getElementById("restart").style.display="block";
+ }
+}
+
+document.getElementById("restart").onclick=()=>{
+ hp1=100;hp2=100;
+ player.root.position.x=-2;
+ enemy.root.position.x=2;
+ attackCooldown=0;enemyCooldown=1;
+ gameOver=false;guarding=false;
+ updateBars();
+ document.getElementById("status").textContent="ROUND 1";
+ document.getElementById("restart").style.display="none";
+};
+
+const clock=new THREE.Clock();
+
+function animate(){
+ requestAnimationFrame(animate);
+ const dt=Math.min(clock.getDelta(),.04);
+
+ if(!gameOver){
+  attackCooldown=Math.max(0,attackCooldown-dt);
+  enemyCooldown-=dt;
+
+  // PLAYER MOVEMENT
+  direction=0;
+  if(keys.a||keys.arrowleft||keys.left)direction-=1;
+  if(keys.d||keys.arrowright||keys.right)direction+=1;
+
+  player.root.position.x+=direction*4*dt;
+  player.root.position.x=THREE.MathUtils.clamp(
+   player.root.position.x,-5,5
+  );
+
+  // PLAYER ARM RESET
+  if(attackCooldown<=.25){
+   player.arms[1].rotation.z=THREE.MathUtils.lerp(
+    player.arms[1].rotation.z,0,dt*12
+   );
+  }
+
+  // CPU MOVEMENT
+  const distance=player.root.position.x-enemy.root.position.x;
+  if(Math.abs(distance)>1.55){
+   enemy.root.position.x+=Math.sign(distance)*2.1*dt;
+  }
+
+  // CPU ATTACK
+  if(Math.abs(distance)<2&&enemyCooldown<=0){
+   enemyCooldown=1.1;
+   enemy.arms[0].rotation.z=1.4;
+
+   if(!guarding){
+    hp1=Math.max(0,hp1-8);
+    updateBars();
+   }
+   checkWinner();
+  }
+
+  enemy.arms[0].rotation.z=THREE.MathUtils.lerp(
+   enemy.arms[0].rotation.z,0,dt*5
+  );
+
+  // Character idle animation
+  const t=clock.elapsedTime;
+  player.root.position.y=Math.abs(Math.sin(t*5))*.035;
+  enemy.root.position.y=Math.abs(Math.sin(t*5+1))*.035;
+ }
+
+ renderer.render(scene,camera);
+}
+animate();
+
+addEventListener("resize",()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
